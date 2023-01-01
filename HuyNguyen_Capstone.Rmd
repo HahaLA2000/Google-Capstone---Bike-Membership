@@ -1,0 +1,181 @@
+---
+title: "Capstone_Google"
+author: "Huy Nguyen"
+date: "2022-12-26"
+output: html_document
+---
+
+# Packages
+
+```{r}
+suppressMessages(library(tidyverse))
+library(readr)
+```
+
+# Load and subset data
+
+```{r}
+library(geosphere)
+dec21 <- read.csv("~/Downloads/2022-GoogleCapstone/CSV_files/202112-divvy-tripdata.csv")
+jan22 <- read.csv("~/Downloads/2022-GoogleCapstone/CSV_files/202201-divvy-tripdata.csv")
+feb22 <- read.csv("~/Downloads/2022-GoogleCapstone/CSV_files/202202-divvy-tripdata.csv")
+mar22 <- read.csv("~/Downloads/2022-GoogleCapstone/CSV_files/202203-divvy-tripdata.csv")
+apr22 <- read.csv("~/Downloads/2022-GoogleCapstone/CSV_files/202204-divvy-tripdata.csv")
+may22 <- read.csv("~/Downloads/2022-GoogleCapstone/CSV_files/202205-divvy-tripdata.csv")
+jun22 <- read.csv("~/Downloads/2022-GoogleCapstone/CSV_files/202206-divvy-tripdata.csv")
+jul22 <- read.csv("~/Downloads/2022-GoogleCapstone/CSV_files/202207-divvy-tripdata.csv")
+aug22 <- read.csv("~/Downloads/2022-GoogleCapstone/CSV_files/202208-divvy-tripdata.csv")
+sep22 <- read.csv("~/Downloads/2022-GoogleCapstone/CSV_files/202209-divvy-publictripdata.csv")
+oct22 <- read.csv("~/Downloads/2022-GoogleCapstone/CSV_files/202210-divvy-tripdata.csv")
+nov22 <- read.csv("~/Downloads/2022-GoogleCapstone/CSV_files/202211-divvy-tripdata.csv")
+```
+
+# Remove private data and convert dates to right format
+
+```{r}
+rem <- function(x){
+  x <- x[,-c(1,5,6,7,8)]
+}
+dec21 <- rem(dec21)
+jan22 <- rem(jan22)
+feb22 <- rem(feb22)
+mar22 <- rem(mar22)
+apr22 <- rem(apr22)
+may22 <- rem(may22)
+jun22 <- rem(jun22)
+jul22 <- rem(jul22)
+aug22 <- rem(aug22)
+sep22 <- rem(sep22)
+oct22 <- rem(oct22)
+nov22 <- rem(nov22)
+
+da <- function(y){
+  y[,c(2)] <- as.POSIXct(y[,c(2)])
+  y[,c(3)] <- as.POSIXct(y[,c(3)])
+  return(y)
+}
+dec21 <- da(dec21)
+jan22 <- da(jan22)
+feb22 <- da(feb22)
+mar22 <- da(mar22)
+apr22 <- da(apr22)
+may22 <- da(may22)
+jun22 <- da(jun22)
+jul22 <- da(jul22)
+aug22 <- da(aug22)
+sep22 <- da(sep22)
+oct22 <- da(oct22)
+nov22 <- da(nov22)
+```
+
+# Check for NAs in date columns and Find date difference
+
+```{r}
+# na_check <- function(z){
+#   a <- sum(is.na(z$started_at))
+#   b <- sum(is.na(z$ended_at))
+#   return(c(a,b))
+# }
+# 
+# na_check(dec21 )
+# na_check(jan22 )
+# na_check(feb22 )
+# na_check(mar22)
+# na_check(apr22)
+# na_check(may22)
+# na_check(jun22)
+# na_check(jul22)
+# na_check(aug22)
+# na_check(sep22)
+# na_check(oct22)
+# na_check(nov22)
+
+date_diff <- function(x1){
+  x1$date_diff <- as.numeric(x1$ended_at - x1$started_at)
+  return(x1)
+}
+
+dec21 <- date_diff(dec21)
+jan22 <- date_diff(jan22)
+feb22 <- date_diff(feb22)
+mar22 <- date_diff(mar22)
+apr22 <- date_diff(apr22)
+may22 <- date_diff(may22)
+jun22 <- date_diff(jun22)
+jul22 <- date_diff(jul22)
+aug22 <- date_diff(aug22)
+sep22 <- date_diff(sep22)
+oct22 <- date_diff(oct22)
+nov22 <- date_diff(nov22)
+```
+
+## Remove the dates columns 
+
+```{r}
+rem_time <- function(x2){
+  x2 <- x2[,-c(2,3)]
+}
+dec21 <- rem_time(dec21)
+jan22 <- rem_time(jan22)
+feb22 <- rem_time(feb22)
+mar22 <- rem_time(mar22)
+apr22 <- rem_time(apr22)
+may22 <- rem_time(may22)
+jun22 <- rem_time(jun22)
+jul22 <- rem_time(jul22)
+aug22 <- rem_time(aug22)
+sep22 <- rem_time(sep22)
+oct22 <- rem_time(oct22)
+nov22 <- rem_time(nov22)
+```
+
+## Remove NAs and convert to factors
+
+```{r}
+na_fac <-function(l){
+  l <- na.omit(l)
+  l[,c(1)] <- as.factor(l[,c(1)])
+  l[,c(6)] <- as.factor(l[,c(6)])
+  return(l)
+}
+dec21 <- na_fac(dec21)
+jan22 <- na_fac(jan22)
+feb22 <- na_fac(feb22)
+mar22 <- na_fac(mar22)
+apr22 <- na_fac(apr22)
+may22 <- na_fac(may22)
+jun22 <- na_fac(jun22)
+jul22 <- na_fac(jul22)
+aug22 <- na_fac(aug22)
+sep22 <- na_fac(sep22)
+oct22 <- na_fac(oct22)
+nov22 <- na_fac(nov22)
+```
+
+## Linear models
+
+```{r}
+set.seed(123)
+new_dat <- new_dat %>% filter(date_diff > 0)
+test.i<- sample(1:nrow(new_dat),round(0.3*nrow(new_dat)),replace = F)
+jul22_train <- new_dat[-test.i,]
+jul22_test <- new_dat[test.i,]
+jul_model <- glm(factor(member_casual)~rideable_type+start_lat+start_lng+end_lat+end_lng+date_diff,family=binomial,data=new_dat)
+pred_jul <- predict(jul_model,jul22_test,type="response")
+#summary(jul_model)
+BC.glm.pred4=rep("casual",round(0.3*nrow(new_dat)))
+BC.glm.pred4[pred_jul<0.5]="member"
+table(BC.glm.pred4, jul22_test$member_casual)
+mean(as.factor(BC.glm.pred4) != as.factor(jul22_test$member_casual))
+summary(jul_model)
+```
+
+## Binding data
+
+```{r}
+new_dat <- rbind(jan22,jun22)
+new_dat <-rbind(new_dat,oct22)
+write.csv(new_dat,"comb_dat.csv")
+```
+
+
